@@ -70,6 +70,12 @@ cd tools && npm test              # 7 tests
 stellar contract build            # in contracts/
 ```
 
+## Documentation
+
+- [Architecture](docs/architecture.md)
+- [Running an airdrop](docs/running-an-airdrop.md)
+- [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
+
 ## Glossary (new to Stellar?)
 
 - **Airdrop**: distributing tokens to many addresses at once.
