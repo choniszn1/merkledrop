@@ -1,0 +1,7 @@
+target/
+test_snapshots/
+.soroban/
+.stellar/
+.DS_Store
+tools/node_modules/
+tools/dist/
