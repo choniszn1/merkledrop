@@ -1,0 +1,27 @@
+{
+  "name": "merkledrop-tools",
+  "version": "0.1.0",
+  "description": "Build Merkle trees and claim proofs for the Merkledrop Soroban contract from a CSV of allocations.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "merkledrop": "dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^14.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^22.10.7",
+    "eslint": "^9.20.0",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^3.0.0"
+  }
+}
