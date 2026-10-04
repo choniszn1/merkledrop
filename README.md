@@ -94,6 +94,7 @@ another deployment with `VITE_CONTRACT_ID` (see `web/.env.example`).
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [Testnet deployment](docs/deployment.md)
 - [Running an airdrop](docs/running-an-airdrop.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
 
