@@ -35,7 +35,7 @@ export default function App() {
     <div>
       <header className="mx-auto flex max-w-5xl items-center justify-between px-5 py-5">
         <div className="flex items-center gap-2.5">
-          <img src="/favicon.svg" className="h-9 w-9" alt="" />
+          <img src={`${import.meta.env.BASE_URL}favicon.svg`} className="h-9 w-9" alt="" />
           <span className="text-xl font-extrabold text-navy">merkledrop</span>
         </div>
         <div className="flex items-center gap-2">
@@ -86,7 +86,7 @@ function Note({ a }: { a: ReturnType<typeof useAction> }) {
 function ClaimPortal({ wallet }: { wallet: Wallet }) {
   const params = new URLSearchParams(location.search);
   const [dropId] = useState(params.get("drop") ?? DEMO_DROP);
-  const [listUrl] = useState(params.get("list") ?? (dropId === DEMO_DROP ? "/demo-drop.json" : ""));
+  const [listUrl] = useState(params.get("list") ?? (dropId === DEMO_DROP ? `${import.meta.env.BASE_URL}demo-drop.json` : ""));
   const [tree, setTree] = useState<DropTree | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
   const [who, setWho] = useState("");
@@ -308,7 +308,7 @@ function CreateDrop({ wallet }: { wallet: Wallet }) {
             {deployed && (
               <p className="text-sm">
                 Host <code>drop.json</code> somewhere public, then share:{" "}
-                <code className="break-all text-azure">{`${location.origin}/?drop=${deployed}&list=<url of drop.json>`}</code>
+                <code className="break-all text-azure">{`${location.origin}${import.meta.env.BASE_URL}?drop=${deployed}&list=<url of drop.json>`}</code>
               </p>
             )}
           </>
