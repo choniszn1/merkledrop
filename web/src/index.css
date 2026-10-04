@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-sky: #eaf4ff;
+  --color-cloud: #ffffff;
+  --color-navy: #0b3d91;
+  --color-azure: #2f80ed;
+  --color-sun: #ffc93c;
+  --color-ink: #0d1b33;
+  --color-mute: #5a6b86;
+  --color-stroke: #d6e6fb;
+  --color-good: #17a673;
+  --color-bad: #e5484d;
+  --font-sans: "Sora", system-ui, sans-serif;
+}
+body { background: linear-gradient(180deg, #d9ecff 0%, var(--color-sky) 40%, #f6fbff 100%); color: var(--color-ink); font-family: var(--font-sans); min-height: 100vh; }
+
+@layer components {
+  .box { background: var(--color-cloud); border: 1px solid var(--color-stroke); border-radius: 26px; box-shadow: 0 30px 60px -40px rgb(11 61 145 / .5); }
+  .ipt { width: 100%; border: 1.5px solid var(--color-stroke); border-radius: 16px; padding: .75rem 1rem; background: #fbfdff; font-size: .9rem; }
+  .ipt:focus { outline: none; border-color: var(--color-azure); }
+  .cta { border-radius: 16px; padding: .75rem 1.3rem; font-weight: 700; font-size: .9rem; }
+  .cta:disabled { opacity: .5; cursor: not-allowed; }
+  .cta-sun { background: var(--color-sun); color: var(--color-ink); }
+  .cta-navy { background: var(--color-navy); color: #fff; }
+  .cta-line { border: 1.5px solid var(--color-stroke); background: #fff; color: var(--color-navy); }
+}

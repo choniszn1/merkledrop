@@ -1,0 +1,32 @@
+{
+  "root": "d68c40e94725970c886e7142ccd4f21e004e7b095bea7bbe63d3384ad4d21646",
+  "total": "175000000",
+  "claims": [
+    {
+      "index": 0,
+      "account": "GCO5NHZOL7XEIODHW4ADOYNYDERESC6RUWPD4WISORESK6QNDLZQRVZK",
+      "amount": "100000000",
+      "proof": [
+        "dab06c949762003890eec3702c913893516d4a76a56fe5270bb15c11c8883aab",
+        "04bcf7ae23ff78c8eef8c8c0f05c09f97b57c065c7510d06fdd584afdf80c720"
+      ]
+    },
+    {
+      "index": 1,
+      "account": "GC7KQUP5QHOZUREJ7IRABCGPYQ5EOE7J4HTRA6FQCZXCQUNGUJFYV4R6",
+      "amount": "50000000",
+      "proof": [
+        "4c7a2e2a36f8af6d203ea5603140dac317bd96c65abbfb7b38f14b57dedc0d72",
+        "04bcf7ae23ff78c8eef8c8c0f05c09f97b57c065c7510d06fdd584afdf80c720"
+      ]
+    },
+    {
+      "index": 2,
+      "account": "GDOUZYKSAA5BZ57QQSRBFHOY6IXP32F2YEHO5RCLIJ626HVOEKRMAD7B",
+      "amount": "25000000",
+      "proof": [
+        "9e8063196165c304471094ef64f3e9f8ea0b5e0d1e30af7f03ac6a7536d2a40e"
+      ]
+    }
+  ]
+}
