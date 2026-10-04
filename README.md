@@ -70,6 +70,27 @@ cd tools && npm test              # 7 tests
 stellar contract build            # in contracts/
 ```
 
+## Web app
+
+![Merkledrop web app](docs/assets/web-app.png)
+
+An airdrop app at `web/`:
+
+- **Claim portal**: drop stats (recipients, claimed so far, closing date), a lookup by address with the allocation and claim status, and one-click claiming with the Merkle proof. A wallet can claim on someone else's behalf, and the tokens still go to them. It also warns if the list's root doesn't match the contract.
+- **Create a drop**: paste or upload a CSV, build the tree **in the browser** (same hashing as the contract), download `drop.json`, then deploy a new drop contract from the uploaded wasm and fund it, all from your wallet.
+- Shareable links: `?drop=<contract>&list=<url of drop.json>`. The bundled demo drop is preloaded.
+
+```bash
+cd web
+npm install
+npm run dev        # http://localhost:5173
+```
+
+It talks to the contract deployed on **Stellar testnet** and signs with
+[Freighter](https://www.freighter.app) (switch it to Testnet). Point it at
+another deployment with `VITE_CONTRACT_ID` (see `web/.env.example`).
+`netlify.toml` at the repo root deploys it as-is.
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
