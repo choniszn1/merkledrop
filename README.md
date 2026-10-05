@@ -91,6 +91,11 @@ It talks to the contract deployed on **Stellar testnet** and signs with
 another deployment with `VITE_CONTRACT_ID` (see `web/.env.example`).
 `netlify.toml` at the repo root deploys it as-is.
 
+The web app has three pages — Home, App and Docs — sharing a header and footer.
+
+![Home page](docs/assets/web-app-home.png)
+![App page](docs/assets/web-app.png)
+
 ## Documentation
 
 - [Architecture](docs/architecture.md)
