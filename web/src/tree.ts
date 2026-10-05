@@ -71,8 +71,12 @@ function csvFields(line: string): string[] {
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
     if (ch === '"') {
-      if (quoted && line[i + 1] === '"') (field += '"'), i++;
-      else quoted = !quoted;
+      if (quoted && line[i + 1] === '"') {
+        field += '"'; // escaped quote inside a quoted field
+        i++;
+      } else {
+        quoted = !quoted;
+      }
     } else if (ch === "," && !quoted) {
       out.push(field.trim());
       field = "";
