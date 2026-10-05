@@ -23,8 +23,23 @@
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, token, xdr::ToXdr, Address,
-    Bytes, BytesN, Env, Vec,
+    Bytes, BytesN, Env, String, Vec,
 };
+
+/// Longest list URI accepted.
+pub const MAX_URI_LEN: u32 = 256;
+/// Most claims `claim_many` processes in one call.
+pub const MAX_BATCH: u32 = 20;
+
+/// One entry for `claim_many`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ClaimInput {
+    pub index: u32,
+    pub account: Address,
+    pub amount: i128,
+    pub proof: Vec<BytesN<32>>,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -35,18 +50,22 @@ pub struct Drop {
     /// Claims are accepted until this ledger timestamp.
     pub ends_at: u64,
     pub claimed_total: i128,
+    /// Where the full allocation list (with proofs) is published, if anywhere.
+    pub list_uri: String,
 }
 
 #[contracttype]
 pub enum DataKey {
     Drop,
-    Claimed(u32),
+    /// Claimed flags, 128 indexes per entry: bit `index % 128` of word `index / 128`.
+    ClaimedWord(u32),
 }
 
 #[contracterror]
 #[derive(Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum Error {
+    /// Kept for stable error codes; drops are set up by their constructor.
     AlreadyInitialized = 1,
     NotInitialized = 2,
     AlreadyClaimed = 3,
@@ -55,6 +74,8 @@ pub enum Error {
     NotEnded = 6,
     InvalidAmount = 7,
     InvalidEnd = 8,
+    UriTooLong = 9,
+    InvalidBatch = 10,
 }
 
 #[contractevent(topics = ["drop", "claimed"])]
@@ -64,6 +85,12 @@ pub struct Claimed {
     pub index: u32,
     pub account: Address,
     pub amount: i128,
+}
+
+#[contractevent(topics = ["drop", "extended"], data_format = "single-value")]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Extended {
+    pub ends_at: u64,
 }
 
 #[contractevent(topics = ["drop", "swept"], data_format = "single-value")]
@@ -82,23 +109,27 @@ pub struct Merkledrop;
 #[contractimpl]
 impl Merkledrop {
     /// Configure the drop and pull `funding` of `token` from the admin.
-    pub fn init(
+    /// Configure and fund the drop at deployment. As a constructor this runs
+    /// in the deploy transaction itself: one confirmation, and no deployed
+    /// contract is ever left waiting for setup.
+    pub fn __constructor(
         env: Env,
         admin: Address,
         token: Address,
         root: BytesN<32>,
         funding: i128,
         ends_at: u64,
+        list_uri: String,
     ) -> Result<(), Error> {
-        if env.storage().instance().has(&DataKey::Drop) {
-            return Err(Error::AlreadyInitialized);
-        }
         admin.require_auth();
         if funding <= 0 {
             return Err(Error::InvalidAmount);
         }
         if ends_at <= env.ledger().timestamp() {
             return Err(Error::InvalidEnd);
+        }
+        if list_uri.len() > MAX_URI_LEN {
+            return Err(Error::UriTooLong);
         }
         token::Client::new(&env, &token).transfer(&admin, env.current_contract_address(), &funding);
         let drop = Drop {
@@ -107,14 +138,13 @@ impl Merkledrop {
             root,
             ends_at,
             claimed_total: 0,
+            list_uri,
         };
         env.storage().instance().set(&DataKey::Drop, &drop);
         env.storage().instance().extend_ttl(BUMP_THRESHOLD, BUMP_TO);
         Ok(())
     }
 
-    /// Claim allocation `index`. Anyone may submit the claim (e.g. a
-    /// relayer paying the fee); tokens always go to `account`.
     pub fn claim(
         env: Env,
         index: u32,
@@ -123,44 +153,38 @@ impl Merkledrop {
         proof: Vec<BytesN<32>>,
     ) -> Result<(), Error> {
         let mut drop = get_drop(&env)?;
-        if env.ledger().timestamp() >= drop.ends_at {
-            return Err(Error::Ended);
-        }
-        if amount <= 0 {
-            return Err(Error::InvalidAmount);
-        }
-        let key = DataKey::Claimed(index);
-        if env.storage().persistent().has(&key) {
-            return Err(Error::AlreadyClaimed);
-        }
-        let leaf = leaf_hash(&env, index, &account, amount);
-        if compute_root(&env, leaf, &proof) != drop.root {
-            return Err(Error::InvalidProof);
-        }
-
-        env.storage().persistent().set(&key, &true);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, BUMP_THRESHOLD, BUMP_TO);
-        drop.claimed_total += amount;
-        env.storage().instance().set(&DataKey::Drop, &drop);
-        env.storage().instance().extend_ttl(BUMP_THRESHOLD, BUMP_TO);
-
-        token::Client::new(&env, &drop.token).transfer(
-            &env.current_contract_address(),
-            &account,
-            &amount,
-        );
-        Claimed {
-            index,
-            account,
-            amount,
-        }
-        .publish(&env);
+        claim_one(&env, &mut drop, index, account, amount, &proof)?;
+        save_drop(&env, &drop);
         Ok(())
     }
 
-    /// After the window closes, return unclaimed tokens to the admin.
+    /// Submit up to `MAX_BATCH` claims at once (e.g. to push tokens to
+    /// recipients). All-or-nothing: one bad entry rejects the whole batch.
+    pub fn claim_many(env: Env, claims: Vec<ClaimInput>) -> Result<(), Error> {
+        if claims.is_empty() || claims.len() > MAX_BATCH {
+            return Err(Error::InvalidBatch);
+        }
+        let mut drop = get_drop(&env)?;
+        for c in claims.iter() {
+            claim_one(&env, &mut drop, c.index, c.account, c.amount, &c.proof)?;
+        }
+        save_drop(&env, &drop);
+        Ok(())
+    }
+
+    /// Push the end date back. Admin only, and only later than the current end.
+    pub fn extend(env: Env, ends_at: u64) -> Result<(), Error> {
+        let mut drop = get_drop(&env)?;
+        drop.admin.require_auth();
+        if ends_at <= drop.ends_at {
+            return Err(Error::InvalidEnd);
+        }
+        drop.ends_at = ends_at;
+        save_drop(&env, &drop);
+        Extended { ends_at }.publish(&env);
+        Ok(())
+    }
+
     pub fn sweep(env: Env) -> Result<i128, Error> {
         let drop = get_drop(&env)?;
         drop.admin.require_auth();
@@ -177,7 +201,7 @@ impl Merkledrop {
     }
 
     pub fn is_claimed(env: Env, index: u32) -> bool {
-        env.storage().persistent().has(&DataKey::Claimed(index))
+        is_claimed(&env, index)
     }
 
     /// Check a proof without claiming (useful for UIs).
@@ -221,6 +245,68 @@ pub fn compute_root(env: &Env, leaf: BytesN<32>, proof: &Vec<BytesN<32>>) -> Byt
         node = env.crypto().sha256(&data).into();
     }
     node
+}
+
+fn claim_one(
+    env: &Env,
+    drop: &mut Drop,
+    index: u32,
+    account: Address,
+    amount: i128,
+    proof: &Vec<BytesN<32>>,
+) -> Result<(), Error> {
+    if env.ledger().timestamp() >= drop.ends_at {
+        return Err(Error::Ended);
+    }
+    if amount <= 0 {
+        return Err(Error::InvalidAmount);
+    }
+    if is_claimed(env, index) {
+        return Err(Error::AlreadyClaimed);
+    }
+    let leaf = leaf_hash(env, index, &account, amount);
+    if compute_root(env, leaf, proof) != drop.root {
+        return Err(Error::InvalidProof);
+    }
+    set_claimed(env, index);
+    drop.claimed_total += amount;
+    token::Client::new(env, &drop.token).transfer(
+        &env.current_contract_address(),
+        &account,
+        &amount,
+    );
+    Claimed {
+        index,
+        account,
+        amount,
+    }
+    .publish(env);
+    Ok(())
+}
+
+fn is_claimed(env: &Env, index: u32) -> bool {
+    let word: u128 = env
+        .storage()
+        .persistent()
+        .get(&DataKey::ClaimedWord(index / 128))
+        .unwrap_or(0);
+    word & (1u128 << (index % 128)) != 0
+}
+
+fn set_claimed(env: &Env, index: u32) {
+    let key = DataKey::ClaimedWord(index / 128);
+    let word: u128 = env.storage().persistent().get(&key).unwrap_or(0);
+    env.storage()
+        .persistent()
+        .set(&key, &(word | (1u128 << (index % 128))));
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, BUMP_THRESHOLD, BUMP_TO);
+}
+
+fn save_drop(env: &Env, drop: &Drop) {
+    env.storage().instance().set(&DataKey::Drop, drop);
+    env.storage().instance().extend_ttl(BUMP_THRESHOLD, BUMP_TO);
 }
 
 fn get_drop(env: &Env) -> Result<Drop, Error> {
