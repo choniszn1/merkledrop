@@ -3,7 +3,7 @@
 1. **Prepare `allocations.csv`** (`address,amount` in base units; 1 XLM = 10,000,000).
 2. **Build the tree:** `node tools/dist/bin.js allocations.csv drop.json`.
    Note the printed `root` and `total`.
-3. **Deploy and init:** `init(admin, token, root, funding = total, ends_at)`.
+3. **Deploy:** one transaction runs the constructor `(admin, token, root, funding = total, ends_at, list_uri)`, which also pulls the funding. `list_uri` tells claimers where `drop.json` lives.
    The contract pulls `funding` from the admin.
 4. **Publish `drop.json`** where your claim page can fetch it, keyed by address.
 5. **Users claim** with `claim(index, address, amount, proof)`. Anyone can
