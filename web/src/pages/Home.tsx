@@ -6,10 +6,11 @@ const DEMO_DROP = "CC64VFG6SEL6QZ75M6CH52V7M4VYSXGXUGLIERPWC5IW6FX3CCD35TDK";
 import { Link, useTitle } from "../lib/router";
 
 export function Home() {
+  const [failed, setFailed] = useState(false);
   useTitle("merkledrop · Merkle-proof airdrops on Stellar");
   const [drop, setDrop] = useState<{ claimed_total: bigint; ends_at: bigint } | null>(null);
   useEffect(() => {
-    client(DEMO_DROP).read<{ claimed_total: bigint; ends_at: bigint }>("get_drop").then(setDrop).catch(() => {});
+    client(DEMO_DROP).read<{ claimed_total: bigint; ends_at: bigint }>("get_drop").then(setDrop).catch(() => setFailed(true));
   }, []);
   const STATS: [string, string][] = [
     ["Demo claimed", drop ? fromUnits(drop.claimed_total) : "…"],
@@ -35,6 +36,14 @@ export function Home() {
               </div>
             ))}
           </dl>
+          {failed && (
+            <p className="mt-6 text-sm opacity-80" role="status">
+              Couldn’t reach Stellar testnet, so live numbers aren’t shown.{" "}
+              <button className="font-semibold underline" onClick={() => window.location.reload()}>
+                Retry
+              </button>
+            </p>
+          )}
         </div>
         <div className="box p-7">
           <p className="text-xs font-bold uppercase tracking-wider text-mute">One root, any number of recipients</p>

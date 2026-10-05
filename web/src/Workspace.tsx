@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { StrKey, xdr } from "@stellar/stellar-sdk";
 import { Buffer } from "buffer";
 import { buildTree, parseCsv, type Claim, type DropTree } from "./tree";
-import { addr, client, contractLink, deployContract, i128, txLink, u32, u64, XLM_SAC } from "./lib/stellar";
+import { addr, client, contractLink, deployContract, i128, str, txLink, u32, u64, XLM_SAC } from "./lib/stellar";
+import { routeParams } from "./lib/router";
 import { dateOf, fromUnits, short, timeLeft, toUnits } from "./lib/format";
 import { useWallet } from "./lib/useWallet";
 import { useAction } from "./lib/useAction";
 
 const DEMO_DROP = import.meta.env.VITE_DROP_ID ?? "CC64VFG6SEL6QZ75M6CH52V7M4VYSXGXUGLIERPWC5IW6FX3CCD35TDK";
-const WASM_HASH = import.meta.env.VITE_DROP_WASM_HASH ?? "d8c699704cda45df28dfce2c9818b176019a62ff8770e3f8ea5b60eb2a17a993";
+const WASM_HASH = import.meta.env.VITE_DROP_WASM_HASH ?? "f285c779874ada4e128931a52b72d9f1fc7d4ea1a83a395f37d3876d9f1ad900";
 const ERRORS: Record<number, string> = {
   1: "This drop is already initialized.",
   2: "That contract isn't an initialized drop.",
@@ -25,6 +26,8 @@ interface Drop {
   root: Uint8Array;
   ends_at: bigint;
   claimed_total: bigint;
+  /** Only on drops created from the constructor build. */
+  list_uri?: string;
 }
 export type Wallet = ReturnType<typeof useWallet>;
 
@@ -43,7 +46,7 @@ export function Workspace({ wallet }: { wallet: Wallet }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl px-5 pb-16">{mode === "claim" ? <ClaimPortal wallet={wallet} /> : <CreateDrop wallet={wallet} />}</main>
+      <div className="mx-auto max-w-5xl px-5 pb-16">{mode === "claim" ? <ClaimPortal wallet={wallet} /> : <CreateDrop wallet={wallet} />}</div>
     </div>
   );
 }
@@ -65,9 +68,10 @@ function Note({ a }: { a: ReturnType<typeof useAction> }) {
 }
 
 function ClaimPortal({ wallet }: { wallet: Wallet }) {
-  const params = new URLSearchParams(location.search);
+  // Claim links look like #/app?drop=C…&list=https://…
+  const params = routeParams();
   const [dropId] = useState(params.get("drop") ?? DEMO_DROP);
-  const [listUrl] = useState(params.get("list") ?? (dropId === DEMO_DROP ? `${import.meta.env.BASE_URL}demo-drop.json` : ""));
+  const [listParam] = useState(params.get("list") ?? (dropId === DEMO_DROP ? `${import.meta.env.BASE_URL}demo-drop.json` : ""));
   const [tree, setTree] = useState<DropTree | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
   const [who, setWho] = useState("");
@@ -76,14 +80,18 @@ function ClaimPortal({ wallet }: { wallet: Wallet }) {
   const act = useAction();
   const c = useMemo(() => client(dropId, ERRORS), [dropId]);
 
+  // Without a list in the link, fall back to the URI stored in the drop itself.
+  const listUrl = listParam || drop?.list_uri || "";
   useEffect(() => {
     c.read<Drop>("get_drop").then(setDrop).catch((e) => setLoadErr(e.message));
+  }, [c]);
+  useEffect(() => {
     if (listUrl)
       fetch(listUrl)
         .then((r) => r.json())
         .then(setTree)
         .catch(() => setLoadErr("Couldn't load the allocation list."));
-  }, [c, listUrl]);
+  }, [listUrl]);
   useEffect(() => {
     if (wallet.address) setWho(wallet.address);
   }, [wallet.address]);
@@ -138,7 +146,21 @@ function ClaimPortal({ wallet }: { wallet: Wallet }) {
               <p className="text-3xl font-extrabold text-navy">
                 {fromUnits(BigInt(entry.amount))} <span className="text-base">{unit}</span>
               </p>
-              <p className="text-xs text-mute">proof: {entry.proof.length} hash{entry.proof.length === 1 ? "" : "es"}</p>
+              <p className="text-xs text-mute">
+                proof: {entry.proof.length} hash{entry.proof.length === 1 ? "" : "es"} ·{" "}
+                <button
+                  className="underline"
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify({ drop: dropId, ...entry }, null, 2)], { type: "application/json" });
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(blob);
+                    a.download = `proof-${entry.index}.json`;
+                    a.click();
+                  }}
+                >
+                  download proof
+                </button>
+              </p>
             </div>
             {claimed[entry.index] ? (
               <span className="rounded-2xl bg-good/15 px-4 py-3 font-semibold text-good">✓ Claimed</span>
@@ -196,6 +218,7 @@ function ClaimPortal({ wallet }: { wallet: Wallet }) {
 function CreateDrop({ wallet }: { wallet: Wallet }) {
   const [csv, setCsv] = useState("address,amount\n");
   const [days, setDays] = useState(30);
+  const [listUri, setListUri] = useState("");
   const [token, setToken] = useState(XLM_SAC);
   const [tree, setTree] = useState<DropTree | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -255,6 +278,10 @@ function CreateDrop({ wallet }: { wallet: Wallet }) {
               Token contract
               <input className="ipt mt-1 font-mono text-xs" value={token} onChange={(e) => setToken(e.target.value.trim())} />
             </label>
+            <label className="block text-sm">
+              Where you'll publish drop.json (optional, stored in the drop)
+              <input className="ipt mt-1 font-mono text-xs" placeholder="https://…/drop.json" value={listUri} onChange={(e) => setListUri(e.target.value)} />
+            </label>
             <label className="flex items-center gap-2 text-sm">
               Claim window <input className="ipt w-20" type="number" min="1" value={days} onChange={(e) => setDays(Number(e.target.value))} /> days
             </label>
@@ -267,29 +294,31 @@ function CreateDrop({ wallet }: { wallet: Wallet }) {
                 await act.run(
                   "deploy",
                   async () => {
-                    const { contractId } = await deployContract(me, WASM_HASH);
+                    // Setup and funding are constructor arguments: one confirmation, no
+                    // half-configured contract if something goes wrong.
                     const ends = BigInt(Math.floor(Date.now() / 1000) + days * 86_400);
-                    const r = await client(contractId, ERRORS).invoke(me, "init", [
+                    const r = await deployContract(me, WASM_HASH, [
                       addr(me),
                       addr(token),
                       xdr.ScVal.scvBytes(Buffer.from(tree.root, "hex")),
                       i128(BigInt(tree.total)),
                       u64(ends),
+                      str(listUri.trim()),
                     ]);
-                    setDeployed(contractId);
+                    setDeployed(r.contractId);
                     return r;
                   },
                   (r) => ({ text: "Drop deployed and funded.", hash: r.hash }),
                 );
               }}
             >
-              {act.busy ? "Confirm in wallet (2 steps)…" : `Deploy & fund ${fromUnits(BigInt(tree.total))}`}
+              {act.busy ? "Confirm in wallet…" : `Deploy & fund ${fromUnits(BigInt(tree.total))}`}
             </button>
             <Note a={act} />
             {deployed && (
               <p className="text-sm">
-                Host <code>drop.json</code> somewhere public, then share:{" "}
-                <code className="break-all text-azure">{`${location.origin}${import.meta.env.BASE_URL}?drop=${deployed}&list=<url of drop.json>`}</code>
+                Host <code>drop.json</code> {listUri.trim() ? <>at <code>{listUri.trim()}</code></> : "somewhere public"}, then share:{" "}
+                <code className="break-all text-azure">{`${location.origin}${import.meta.env.BASE_URL}#/app?drop=${deployed}${listUri.trim() ? "" : "&list=<url of drop.json>"}`}</code>
               </p>
             )}
           </>

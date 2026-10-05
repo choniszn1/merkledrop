@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildTree } from "./tree";
+import { buildTree, parseCsv } from "./tree";
 
 // Same fixture as contracts/merkledrop/src/test.rs and tools/src/fixture.ts.
 const FIXTURE = [
@@ -14,5 +14,23 @@ describe("browser tree builder", () => {
   });
   it("rejects duplicates", () => {
     expect(() => buildTree([FIXTURE[0], FIXTURE[0]])).toThrow(/duplicate/);
+  });
+});
+
+describe("parseCsv details", () => {
+  const units = (s: string) => {
+    if (!/^\d+(\.\d+)?$/.test(s)) throw new Error("bad");
+    return BigInt(Math.round(Number(s) * 1e7));
+  };
+  it("reports the line number as it appears in the file", () => {
+    const text = "address,amount\n\nGA,1\n\nGB,oops\n";
+    expect(() => parseCsv(text, units)).toThrow('Line 5: "oops"');
+  });
+  it("accepts quoted amounts with thousands separators and a quoted header", () => {
+    const rows = parseCsv('"address","amount"\nGA,"1,000.5"\nGB,2', units);
+    expect(rows).toEqual([
+      { account: "GA", amount: 10_005_000_000n },
+      { account: "GB", amount: 20_000_000n },
+    ]);
   });
 });

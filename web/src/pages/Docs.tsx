@@ -1,7 +1,8 @@
 import { contractLink } from "../lib/stellar";
 
 const DEMO_DROP = "CC64VFG6SEL6QZ75M6CH52V7M4VYSXGXUGLIERPWC5IW6FX3CCD35TDK";
-import { Link, useTitle } from "../lib/router";
+import { useEffect } from "react";
+import { Link, useSection, useTitle } from "../lib/router";
 
 const SECTIONS = [
   ["start", "Getting started"],
@@ -12,23 +13,19 @@ const SECTIONS = [
 
 export function Docs() {
   useTitle("Docs · merkledrop");
+  const section = useSection();
+  useEffect(() => {
+    if (section) document.getElementById(section)?.scrollIntoView({ behavior: "smooth" });
+  }, [section]);
   return (
     <div className="mx-auto grid max-w-6xl gap-12 px-5 py-14 lg:grid-cols-[210px_1fr]">
       <aside className="hidden lg:block">
         <nav className="sticky top-24 space-y-1 text-sm">
           <p className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-azure">On this page</p>
           {SECTIONS.map(([id, label]) => (
-            <a
-              key={id}
-              href="#/docs"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
-              }}
-              className="block rounded-lg px-3 py-2 text-mute hover:bg-white hover:text-navy"
-            >
+            <Link key={id} to={`/docs/${id}`} className="block rounded-lg px-3 py-2 text-mute hover:bg-white hover:text-navy">
               {label}
-            </a>
+            </Link>
           ))}
         </nav>
       </aside>
@@ -114,7 +111,7 @@ const START: string[] = [
   "Install the Freighter browser wallet, switch it to Testnet and fund the account with test XLM from Friendbot (lab.stellar.org/account/fund).",
   "To claim: open the app, connect your wallet, find your entry in the drop’s list and press Claim.",
   "To create: switch to “Create a drop”, paste a CSV of address,amount lines and check the total.",
-  "Choose the token and end date, deploy and fund the drop, then share the claim link along with the list."
+  "Choose the token and end date, say where you'll publish drop.json, then deploy and fund in one confirmation and share the claim link."
 ];
 
 const CONCEPTS: [string, string][] = [
@@ -138,14 +135,24 @@ const CONCEPTS: [string, string][] = [
 
 const REFERENCE: [string, string, string][] = [
   [
-    "init(admin, token, root, funding, ends_at)",
+    "constructor(admin, token, root, funding, ends_at, list_uri)",
     "admin",
-    "Stores the root and pulls the funding"
+    "Runs in the deploy transaction: stores the root and list URI and pulls the funding"
   ],
   [
     "claim(index, account, amount, proof)",
     "anyone",
     "Pays the account if the proof matches and it’s unclaimed"
+  ],
+  [
+    "claim_many(claims)",
+    "anyone",
+    "Up to 20 claims at once, all-or-nothing"
+  ],
+  [
+    "extend(ends_at)",
+    "admin",
+    "Pushes the end date back"
   ],
   [
     "verify(index, account, amount, proof)",

@@ -7,6 +7,8 @@ use soroban_sdk::{
     vec, Env, String,
 };
 
+const LIST: &str = "https://example.org/drop.json";
+
 const NOW: u64 = 1_700_000_000;
 const END: u64 = NOW + 30 * 86_400;
 
@@ -84,13 +86,25 @@ fn setup<'a>() -> Setup<'a> {
     let env = Env::default();
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = NOW);
-    let drop = MerkledropClient::new(&env, &env.register(Merkledrop, ()));
     let token = env
         .register_stellar_asset_contract_v2(Address::generate(&env))
         .address();
     let admin = Address::generate(&env);
     StellarAssetClient::new(&env, &token).mint(&admin, &(TOTAL + 1_000));
-    drop.init(&admin, &token, &hex32(&env, ROOT), &TOTAL, &END);
+    let drop = MerkledropClient::new(
+        &env,
+        &env.register(
+            Merkledrop,
+            (
+                admin.clone(),
+                token.clone(),
+                hex32(&env, ROOT),
+                TOTAL,
+                END,
+                String::from_str(&env, LIST),
+            ),
+        ),
+    );
     let token_client = token::Client::new(&env, &token);
     Setup {
         env,
@@ -204,33 +218,104 @@ fn claims_close_at_the_end_and_the_admin_sweeps_the_rest() {
 }
 
 #[test]
-fn init_validation() {
+#[should_panic]
+fn constructor_rejects_zero_funding() {
     let env = Env::default();
     env.mock_all_auths();
     env.ledger().with_mut(|l| l.timestamp = NOW);
-    let drop = MerkledropClient::new(&env, &env.register(Merkledrop, ()));
-    let token = env
-        .register_stellar_asset_contract_v2(Address::generate(&env))
-        .address();
-    let admin = Address::generate(&env);
-    let root = hex32(&env, ROOT);
-    assert_eq!(
-        drop.try_init(&admin, &token, &root, &0, &END),
-        Err(Ok(Error::InvalidAmount))
+    let a = Address::generate(&env);
+    env.register(
+        Merkledrop,
+        (
+            a.clone(),
+            a,
+            hex32(&env, ROOT),
+            0i128,
+            END,
+            String::from_str(&env, ""),
+        ),
     );
-    assert_eq!(
-        drop.try_init(&admin, &token, &root, &1, &NOW),
-        Err(Ok(Error::InvalidEnd))
-    );
-    assert_eq!(drop.try_get_drop(), Err(Ok(Error::NotInitialized)));
 }
 
 #[test]
-fn cannot_init_twice() {
+#[should_panic]
+fn constructor_rejects_a_past_end() {
+    let env = Env::default();
+    env.mock_all_auths();
+    env.ledger().with_mut(|l| l.timestamp = NOW);
+    let a = Address::generate(&env);
+    env.register(
+        Merkledrop,
+        (
+            a.clone(),
+            a,
+            hex32(&env, ROOT),
+            1i128,
+            NOW,
+            String::from_str(&env, ""),
+        ),
+    );
+}
+
+#[test]
+fn the_list_uri_is_stored_with_the_root() {
     let s = setup();
+    assert_eq!(s.drop.get_drop().list_uri, String::from_str(&s.env, LIST));
+}
+
+#[test]
+fn admin_can_extend_but_not_shorten_the_window() {
+    let s = setup();
+    assert_eq!(s.drop.try_extend(&(END - 1)), Err(Ok(Error::InvalidEnd)));
+    s.drop.extend(&(END + 10 * 86_400));
+    s.env.ledger().with_mut(|l| l.timestamp = END + 86_400);
+    s.drop
+        .claim(&0, &account(&s.env, 0), &AMOUNTS[0], &proof(&s.env, 0));
+    assert_eq!(s.drop.try_sweep(), Err(Ok(Error::NotEnded)));
+}
+
+#[test]
+fn claim_many_is_all_or_nothing() {
+    let s = setup();
+    let entry = |i: usize, amount: i128| ClaimInput {
+        index: i as u32,
+        account: account(&s.env, i),
+        amount,
+        proof: proof(&s.env, i),
+    };
+    // A wrong amount in the batch rejects every claim in it.
     assert_eq!(
         s.drop
-            .try_init(&s.admin, &s.drop.address, &hex32(&s.env, ROOT), &1, &END),
-        Err(Ok(Error::AlreadyInitialized))
+            .try_claim_many(&vec![&s.env, entry(0, AMOUNTS[0]), entry(1, 1)]),
+        Err(Ok(Error::InvalidProof))
     );
+    assert!(!s.drop.is_claimed(&0));
+
+    s.drop.claim_many(&vec![
+        &s.env,
+        entry(0, AMOUNTS[0]),
+        entry(1, AMOUNTS[1]),
+        entry(2, AMOUNTS[2]),
+    ]);
+    assert_eq!(s.drop.get_drop().claimed_total, TOTAL);
+    assert_eq!(
+        s.drop.try_claim_many(&Vec::new(&s.env)),
+        Err(Ok(Error::InvalidBatch))
+    );
+}
+
+#[test]
+fn claimed_flags_pack_into_words() {
+    let s = setup();
+    s.env.as_contract(&s.drop.address, || {
+        for i in [0u32, 127, 128, 255, 70_000] {
+            assert!(!is_claimed(&s.env, i));
+            set_claimed(&s.env, i);
+            assert!(is_claimed(&s.env, i));
+        }
+        // Neighbours in the same and adjacent words are untouched.
+        for i in [1u32, 126, 129, 254, 256, 69_999] {
+            assert!(!is_claimed(&s.env, i));
+        }
+    });
 }

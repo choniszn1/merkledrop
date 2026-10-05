@@ -47,6 +47,12 @@ describe("buildTree", () => {
 });
 
 describe("parseCsv", () => {
+  it("names the real line and accepts quoted amounts with separators", () => {
+    const csv = `address,amount\n\n${FIXTURE[0].account},"1,000"\n\n${FIXTURE[1].account},oops`;
+    expect(() => parseCsv(csv)).toThrow(/^line 5:/);
+    expect(parseCsv(`"address","amount"\n${FIXTURE[0].account},"1,000"`)).toEqual([{ account: FIXTURE[0].account, amount: 1000n }]);
+  });
+
   it("parses rows, skipping a header and blank lines", () => {
     const csv = `address,amount\n${FIXTURE[0].account}, 100\n\n${FIXTURE[1].account},200\r\n`;
     expect(parseCsv(csv)).toEqual([

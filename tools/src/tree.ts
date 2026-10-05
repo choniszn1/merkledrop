@@ -87,15 +87,21 @@ export function verifyClaim(root: string, claim: Claim): boolean {
   return node.toString("hex") === root;
 }
 
-/** Parse `address,amount` lines (header and blank lines allowed). */
+/**
+ * Parse `address,amount` lines (header and blank lines allowed). Quoted
+ * fields and thousands separators are accepted; errors name the line as it
+ * appears in the file.
+ */
 export function parseCsv(text: string): Allocation[] {
-  return text
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && !/^address\s*,/i.test(line))
-    .map((line, i) => {
-      const [account, amount] = line.split(",").map((s) => s.trim());
-      if (!/^\d+$/.test(amount ?? "")) throw new Error(`line ${i + 1}: amount must be a whole number of base units`);
-      return { account, amount: BigInt(amount) };
-    });
+  const out: Allocation[] = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || /^"?address"?\s*,/i.test(line)) return;
+    const comma = line.search(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/); // first comma outside quotes
+    const account = (comma === -1 ? line : line.slice(0, comma)).replace(/"/g, "").trim();
+    const amount = (comma === -1 ? "" : line.slice(comma + 1)).replace(/["_,\s]/g, "");
+    if (!/^\d+$/.test(amount)) throw new Error(`line ${i + 1}: amount must be a whole number of base units`);
+    out.push({ account, amount: BigInt(amount) });
+  });
+  return out;
 }

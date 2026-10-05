@@ -63,18 +63,44 @@ export function buildTree(rows: { account: string; amount: bigint }[]): DropTree
   return { root: levels[levels.length - 1][0].toString("hex"), total: total.toString(), claims };
 }
 
-/** "address,amount" CSV where amount is a decimal in whole tokens (7 decimals). */
+/** Split one CSV line, honouring double quotes ("1,000.5" stays one field). */
+function csvFields(line: string): string[] {
+  const out: string[] = [];
+  let field = "";
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (quoted && line[i + 1] === '"') (field += '"'), i++;
+      else quoted = !quoted;
+    } else if (ch === "," && !quoted) {
+      out.push(field.trim());
+      field = "";
+    } else {
+      field += ch;
+    }
+  }
+  out.push(field.trim());
+  return out;
+}
+
+/**
+ * "address,amount" CSV where amount is a decimal in whole tokens (7 decimals).
+ * A header row and blank lines are skipped; quoted amounts may use thousands
+ * separators. Errors name the line as it appears in the file.
+ */
 export function parseCsv(text: string, toUnits: (s: string) => bigint) {
-  return text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l && !/^address\s*,/i.test(l))
-    .map((l, i) => {
-      const [account, amount] = l.split(",").map((s) => s.trim());
-      try {
-        return { account, amount: toUnits(amount ?? "") };
-      } catch {
-        throw new Error(`Line ${i + 1}: "${amount}" isn't a valid amount`);
-      }
-    });
+  const rows: { account: string; amount: bigint }[] = [];
+  text.split(/\r?\n/).forEach((raw, i) => {
+    const line = raw.trim();
+    if (!line || /^"?address"?\s*,/i.test(line)) return;
+    const [account, amountRaw = ""] = csvFields(line);
+    const amount = amountRaw.replace(/[,_\s]/g, "");
+    try {
+      rows.push({ account, amount: toUnits(amount) });
+    } catch {
+      throw new Error(`Line ${i + 1}: "${amountRaw}" isn't a valid amount`);
+    }
+  });
+  return rows;
 }
