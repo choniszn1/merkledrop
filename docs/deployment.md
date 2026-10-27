@@ -16,3 +16,7 @@ Deployed 2026-10-04. Native XLM's asset contract on testnet is
 The demo drop was created from the earlier build (separate `init` call). Drops created
 from the web app now use the constructor build above; a test drop from it is
 `CCGLNZFOJVGDL3CAJOMKL4R7VQW4MO4ANCPZFLWZFBBYS6AL5QKRMWPG`.
+
+## Next steps
+
+See [running-an-airdrop.md](running-an-airdrop.md) for post-deployment steps.
