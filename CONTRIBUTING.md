@@ -19,6 +19,14 @@ cd merkledrop
 The [README](./README.md) explains what the project does, and
 [`docs/`](./docs) covers the design in more depth.
 
+## Running tests locally
+
+To run the full test suite before submitting a pull request:
+
+
+
+All three must pass. CI runs the same commands on every PR.
+
 ## Before opening a pull request
 
 Run the same checks CI runs (`.github/workflows/ci.yml`):
