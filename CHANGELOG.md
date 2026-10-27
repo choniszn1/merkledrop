@@ -16,3 +16,5 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Initial release of Merkledrop: a Merkle-proof airdrop contract with a TypeScript tree builder.
+
+<!-- kept in reverse-chronological order -->
