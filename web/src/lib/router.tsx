@@ -9,7 +9,7 @@ export interface Location {
 
 /** Parse a location hash like "#/docs/faq?x=1" into a page path and an optional section. */
 export function parseHash(hash: string): Location {
-  const h = hash.replace(/^#/, "");
+  const h = decodeURIComponent(hash).replace(/^#/, "");
   if (!h.startsWith("/")) return { path: "/", section: null };
   const clean = h.split("?")[0];
   const m = clean.match(/^\/docs\/([\w-]+)\/?$/);
