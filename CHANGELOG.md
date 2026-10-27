@@ -16,3 +16,7 @@ All notable changes to this project are documented here. The format follows
 ### Added
 
 - Initial release of Merkledrop: a Merkle-proof airdrop contract with a TypeScript tree builder.
+- Soroban smart contract with `claim`, `claim_many`, and `sweep` entry points.
+- TypeScript tree builder (`tools/`) for building Merkle trees from CSV allocation lists.
+- React web app (`web/`) for claiming drops via the Freighter wallet extension.
+- Documentation under `docs/` covering architecture, deployment, and running an airdrop.
