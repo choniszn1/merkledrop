@@ -58,3 +58,7 @@ Use the issue templates under **New issue**. For security problems, follow
 ## Code of conduct
 
 This project follows the [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+## Style guide
+
+Run `cargo fmt` for Rust and `npm run format` for TypeScript before committing.
