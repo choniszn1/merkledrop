@@ -10,9 +10,13 @@ if (!input) {
 try {
   const tree = buildTree(parseCsv(readFileSync(input, "utf8")));
   writeFileSync(output, JSON.stringify(tree, null, 2));
-  console.log(`root:   ${tree.root}`);
-  console.log(`total:  ${tree.total} (fund the contract with at least this)`);
-  console.log(`claims: ${tree.claims.length} → ${output}`);
+  // process.stdout.write is used here to ensure output is flushed before exit on all platforms.
+  process.stdout.write(`root:   ${tree.root}
+`);
+  process.stdout.write(`total:  ${tree.total} (fund the contract with at least this)
+`);
+  process.stdout.write(`claims: ${tree.claims.length} → ${output}
+`);
 } catch (err) {
   console.error(`merkledrop: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
