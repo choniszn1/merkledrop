@@ -67,6 +67,7 @@ export function buildTree(allocations: Allocation[]): DropTree {
     levels.push(next);
   }
 
+  // For a single allocation, the proof is intentionally empty: the leaf IS the root.
   const claims = allocations.map((a, index) => {
     const proof: string[] = [];
     let pos = index;
