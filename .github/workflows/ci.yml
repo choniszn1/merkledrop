@@ -24,6 +24,10 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo test
       - run: cargo build --target wasm32v1-none --release
+      - name: cargo audit
+        run: |
+          cargo install cargo-audit --quiet
+          cargo audit
 
   tools:
     runs-on: ubuntu-latest
