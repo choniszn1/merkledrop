@@ -1,3 +1,4 @@
+# See docs/deployment.md for build instructions
 [package]
 name = "merkledrop"
 version = "0.1.0"
