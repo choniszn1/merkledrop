@@ -28,7 +28,8 @@ use soroban_sdk::{
 
 /// Longest list URI accepted, measured in bytes (not characters).
 pub const MAX_URI_LEN: u32 = 256;
-/// Most claims `claim_many` processes in one call.
+/// Most claims `claim_many` processes in one call. Larger batches cost more gas;
+/// tune this against the network fee budget per transaction.
 pub const MAX_BATCH: u32 = 20;
 
 /// One entry for `claim_many`.
