@@ -265,6 +265,9 @@ fn claim_one(
     if is_claimed(env, index) {
         return Err(Error::AlreadyClaimed);
     }
+    if proof.is_empty() {
+        return Err(Error::InvalidProof);
+    }
     let leaf = leaf_hash(env, index, &account, amount);
     if compute_root(env, leaf, proof) != drop.root {
         return Err(Error::InvalidProof);
