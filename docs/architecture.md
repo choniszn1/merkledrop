@@ -30,3 +30,5 @@ node = sha256( min(a,b) ‖ max(a,b) )
 `contracts/merkledrop/src/test.rs` hard-codes a root and proofs produced by
 `tools/`, and `tools/src/tree.test.ts` asserts the same root. A change to
 either side's encoding fails CI.
+
+<!-- TODO: add Mermaid diagram -->
