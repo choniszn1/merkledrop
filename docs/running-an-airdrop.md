@@ -16,3 +16,7 @@
   Say so clearly on the claim page.
 - Keep a copy of `drop.json`: without it, recipients can't build proofs.
 - De-duplicate addresses before building. The builder rejects duplicates.
+
+## Troubleshooting
+
+See [README.md](../README.md#faq) for common issues.
