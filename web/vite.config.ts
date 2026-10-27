@@ -2,6 +2,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
+// See web/.env.example for available env vars
 export default defineConfig({
   // Set by the GitHub Pages workflow to /<repo>/; "/" for Netlify or local dev.
   // For subdirectory deployments (e.g. /merkledrop/), set VITE_BASE=/<repo>/ in CI.
