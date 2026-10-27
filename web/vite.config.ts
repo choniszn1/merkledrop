@@ -7,6 +7,8 @@ export default defineConfig({
   // For subdirectory deployments (e.g. /merkledrop/), set VITE_BASE=/<repo>/ in CI.
   base: process.env.VITE_BASE ?? "/",
   plugins: [react(), tailwindcss()],
+  // VITE_* env vars are injected at build time by Vite and accessed via import.meta.env.
+  // Add new env vars to web/.env.example and prefix them with VITE_ to expose them to the browser.
   define: { global: "globalThis" },
   build: { chunkSizeWarningLimit: 2000 },
 });
