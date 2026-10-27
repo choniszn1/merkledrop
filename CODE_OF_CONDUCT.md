@@ -37,7 +37,8 @@ public spaces.
 
 Report unacceptable behavior privately through the repository's
 [Security tab](https://github.com/choniszn1/merkledrop/security) ("Report a vulnerability" creates a private
-thread with the maintainers) or by contacting the maintainers on GitHub.
+thread with the maintainers), by contacting the maintainers on GitHub, or by emailing
+**conduct@merkledrop.example**.
 All complaints will be reviewed promptly and fairly, and the reporter's
 privacy will be respected.
 
