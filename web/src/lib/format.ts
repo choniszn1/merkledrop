@@ -7,7 +7,8 @@ export function fromUnits(value: bigint | number | string, decimals = 7): string
   const abs = neg ? -v : v;
   const base = 10n ** BigInt(decimals);
   const whole = abs / base;
-  const frac = (abs % base).toString().padStart(decimals, "0").replace(/0+$/, "");
+  const rawFrac = (abs % base).toString().padStart(decimals, "0");
+  const frac = rawFrac.replace(/0+$/, "") || (abs === 0n && decimals > 0 ? "0" : "");
   return `${neg ? "-" : ""}${whole.toLocaleString("en-US")}${frac ? `.${frac}` : ""}`;
 }
 
