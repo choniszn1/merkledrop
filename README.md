@@ -39,7 +39,7 @@ Duplicate addresses and invalid keys are rejected.
 
 | Function | Who signs | Notes |
 | --- | --- | --- |
-| constructor `(admin, token, root, funding, ends_at, list_uri)` | admin | Runs in the deploy transaction: pulls `funding` and stores the root and where the list lives |
+| constructor `(admin, token, root, funding, ends_at, list_uri)` | admin | Runs in the deploy transaction: pulls `funding` and stores the root and where the list lives. `ends_at` is a **UNIX timestamp in seconds** (not a ledger number). |
 | `claim(index, account, amount, proof)` | anyone | Tokens always go to `account`, so a relayer can pay the fee |
 | `claim_many(claims)` | anyone | Up to 20 claims at once; all-or-nothing |
 | `verify(index, account, amount, proof)` | anyone | Check a proof without claiming |
