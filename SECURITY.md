@@ -15,6 +15,10 @@ Include what's affected, how to reproduce it (a failing test is ideal), and
 the impact you expect. You'll get an acknowledgement on the advisory, and
 a fix is coordinated there before anything is disclosed.
 
+## Disclosure timeline
+
+We aim to acknowledge reports within **3 business days** and to release a fix within **90 days** of acknowledgement. If a fix cannot be delivered in 90 days, we will coordinate an extended timeline with the reporter. Contact: security@merkledrop.example
+
 ## What's in scope
 
 Anything in this repository, especially proof verification, double claims, leaf encoding mismatches between Rust and TypeScript.
