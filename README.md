@@ -1,3 +1,4 @@
+<!-- badges -->
 # Merkledrop
 
 **Airdrop tokens to thousands of Stellar addresses for the cost of one hash.**
