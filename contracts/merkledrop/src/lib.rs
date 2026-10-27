@@ -26,7 +26,7 @@ use soroban_sdk::{
     Bytes, BytesN, Env, String, Vec,
 };
 
-/// Longest list URI accepted.
+/// Longest list URI accepted, measured in bytes (not characters).
 pub const MAX_URI_LEN: u32 = 256;
 /// Most claims `claim_many` processes in one call.
 pub const MAX_BATCH: u32 = 20;
