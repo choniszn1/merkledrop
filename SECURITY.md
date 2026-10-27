@@ -23,3 +23,7 @@ Anything in this repository, especially proof verification, double claims, leaf 
 
 Only the latest commit on `main` is supported. There are no tagged
 releases yet, so fixes land on `main`.
+
+## Scope
+
+This policy covers the smart contract and TypeScript tree builder only.
